@@ -12,6 +12,7 @@ logging.basicConfig(level=logging.INFO)
 # Shopify API credentials
 SHOPIFY_ACCESS_TOKEN = os.environ.get('SHOPIFY_ACCESS_TOKEN', 'YOUR_SHOPIFY_ACCESS_TOKEN')
 SHOPIFY_SHOP_NAME = os.environ.get('SHOPIFY_SHOP_NAME', 'YOUR_SHOP_NAME')
+WEBSITE_URL = os.environ.get('WEBSITE_URL', 'https://zincs-for-boats.myshopify.com')
 
 # Function to parse the user query
 def parse_query(query):
@@ -37,9 +38,15 @@ def fetch_product_details(query):
         headers = {
             "X-Shopify-Access-Token": SHOPIFY_ACCESS_TOKEN
         }
-        response = requests.get(url, headers=headers, params={'title': query})
+        params = {'title': query}
+        logging.info(f"Request URL: {url}")
+        logging.info(f"Request Headers: {headers}")
+        logging.info(f"Request Params: {params}")
+        response = requests.get(url, headers=headers, params=params)
         response.raise_for_status()
         products = response.json().get('products', [])
+        logging.info(f"Response Status Code: {response.status_code}")
+        logging.info(f"Response JSON: {response.json()}")
         return products
     except requests.RequestException as e:
         logging.error(f"Error fetching data from Shopify: {e}")
@@ -53,13 +60,13 @@ def generate_response(query):
         response_parts = []
         for product in products:
             product_name = product['title']
-            product_url = f"https://{SHOPIFY_SHOP_NAME}.myshopify.com/products/{product['handle']}"
+            product_url = f"{WEBSITE_URL}/products/{product['handle']}"
             response_parts.append(f"[{product_name}]({product_url})")
         
         response_message = f"We found the following matches for your query:\n\n" + "\n".join(response_parts)
     else:
         response_message = (f"We currently do not have the exact product you're looking for in our system, but we may have them in stock. "
-                            f"Please visit our [Shopify store](https://{SHOPIFY_SHOP_NAME}.myshopify.com) and use the on-site search option. "
+                            f"Please visit our [Shopify store]({WEBSITE_URL}) and use the on-site search option. "
                             f"Thank you for visiting today, and we appreciate the opportunity to earn your business.")
     
     return response_message
