@@ -93,7 +93,7 @@ def generate_response(query, page=1, per_page=10):
 def get_openai_response(prompt):
     try:
         response = openai.Completion.create(
-            engine="text-davinci-003",
+            model="gpt-3.5-turbo",  # Update to a current model
             prompt=prompt,
             max_tokens=150
         )
