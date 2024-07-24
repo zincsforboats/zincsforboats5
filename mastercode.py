@@ -64,6 +64,11 @@ def generate_response(query):
     
     return response_message
 
+# Root route
+@app.route('/')
+def home():
+    return "Welcome to the Boat Zincs API"
+
 # Route to handle user queries
 @app.route('/get_response', methods=['GET'])
 def get_response():
