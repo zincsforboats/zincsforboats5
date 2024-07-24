@@ -60,7 +60,7 @@ def generate_response(query):
         response_parts = []
         for product in products:
             product_name = product['title']
-            product_url = f"{WEBSITE_URL}/products/{product['handle']}"
+            product_url = f"https://{WEBSITE_URL}/products/{product['handle']}"
             response_parts.append(f"[{product_name}]({product_url})")
         
         response_message = f"We found the following matches for your query:\n\n" + "\n".join(response_parts)
