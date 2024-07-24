@@ -4,6 +4,7 @@ import os
 import requests
 import logging
 import re
+import math
 
 app = Flask(__name__)
 CORS(app)  # This will enable CORS for all routes
@@ -55,25 +56,34 @@ def fetch_product_details(query):
         return []
 
 # Function to generate a response based on product availability
-def generate_response(query):
+def generate_response(query, page=1, per_page=10):
     parsed_query = parse_query(query)
     product_query = parsed_query['product']
     products = fetch_product_details(product_query)
     
     if products:
+        total_products = len(products)
+        total_pages = math.ceil(total_products / per_page)
+        
+        start = (page - 1) * per_page
+        end = start + per_page
+        paginated_products = products[start:end]
+        
         response_parts = []
-        for product in products:
+        for product in paginated_products:
             product_name = product['title']
             product_url = f"{WEBSITE_URL}/products/{product['handle']}"
             response_parts.append(f"[{product_name}]({product_url})")
         
-        response_message = f"We found the following matches for your query:\n\n" + "\n".join(response_parts)
+        response_message = (f"We found the following matches for your query (Page {page} of {total_pages}):\n\n" + 
+                            "\n".join(response_parts) +
+                            f"\n\nUse 'next' or 'prev' to navigate pages.")
     else:
         response_message = (f"We currently do not have the exact product you're looking for in our system, but we may have them in stock. "
                             f"Please visit our [Shopify store]({WEBSITE_URL}) and use the on-site search option. "
                             f"Thank you for visiting today, and we appreciate the opportunity to earn your business.")
     
-    return response_message
+    return response_message, total_pages
 
 # Root route
 @app.route('/')
@@ -86,13 +96,16 @@ def get_response():
     try:
         logging.info("Handling /get_response request")
         query = request.args.get('query')
+        page = int(request.args.get('page', 1))
+        per_page = int(request.args.get('per_page', 10))
+        
         if not query:
             logging.info("Query not provided")
             return jsonify({"error": "Query is required"}), 400
         
-        response_message = generate_response(query)
+        response_message, total_pages = generate_response(query, page, per_page)
         logging.info("Returning generated response")
-        return jsonify({"message": response_message})
+        return jsonify({"message": response_message, "total_pages": total_pages, "current_page": page})
     except Exception as e:
         logging.error(f"Error in /get_response endpoint: {e}")
         return jsonify({"error": "An unexpected error occurred."}), 500
