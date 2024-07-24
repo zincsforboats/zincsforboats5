@@ -20,7 +20,7 @@ WEBSITE_URL = os.environ.get('WEBSITE_URL', 'https://zincsforboats.com')
 def parse_query(query):
     year_pattern = re.compile(r'\b(19|20)\d{2}\b')
     model_pattern = re.compile(r'\b(?:Hewescraft\s+\d+\s+\w+)\b', re.IGNORECASE)
-    product_pattern = re.compile(r'\b(zinc plates?)\b', re.IGNORECASE)
+    product_pattern = re.compile(r'\b(zinc plates?|boat stands?|anodes?|paints?)\b', re.IGNORECASE)
 
     year = year_pattern.search(query)
     model = model_pattern.search(query)
@@ -56,7 +56,9 @@ def fetch_product_details(query):
 
 # Function to generate a response based on product availability
 def generate_response(query):
-    products = fetch_product_details(query)
+    parsed_query = parse_query(query)
+    product_query = parsed_query['product']
+    products = fetch_product_details(product_query)
     
     if products:
         response_parts = []
