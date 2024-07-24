@@ -4,6 +4,7 @@ import os
 import requests
 import logging
 import re
+import openai
 import math
 
 app = Flask(__name__)
@@ -16,6 +17,9 @@ logging.basicConfig(level=logging.INFO)
 SHOPIFY_ACCESS_TOKEN = os.environ.get('SHOPIFY_ACCESS_TOKEN', 'YOUR_SHOPIFY_ACCESS_TOKEN')
 SHOPIFY_SHOP_NAME = os.environ.get('SHOPIFY_SHOP_NAME', 'YOUR_SHOP_NAME')
 WEBSITE_URL = os.environ.get('WEBSITE_URL', 'https://zincsforboats.com')
+
+# OpenAI API key
+openai.api_key = os.environ.get('OPENAI_API_KEY')
 
 # Function to parse the user query
 def parse_query(query):
@@ -85,6 +89,19 @@ def generate_response(query, page=1, per_page=10):
     
     return response_message, total_pages
 
+# Function to interact with OpenAI API
+def get_openai_response(prompt):
+    try:
+        response = openai.Completion.create(
+            engine="text-davinci-003",
+            prompt=prompt,
+            max_tokens=150
+        )
+        return response.choices[0].text.strip()
+    except Exception as e:
+        logging.error(f"Error fetching data from OpenAI: {e}")
+        return "An error occurred while trying to generate a response."
+
 # Root route
 @app.route('/')
 def home():
@@ -104,8 +121,10 @@ def get_response():
             return jsonify({"error": "Query is required"}), 400
         
         response_message, total_pages = generate_response(query, page, per_page)
+        openai_response = get_openai_response(query)
+        final_response = f"{response_message}\n\nAdditionally, here's some advice: {openai_response}"
         logging.info("Returning generated response")
-        return jsonify({"message": response_message, "total_pages": total_pages, "current_page": page})
+        return jsonify({"message": final_response, "total_pages": total_pages, "current_page": page})
     except Exception as e:
         logging.error(f"Error in /get_response endpoint: {e}")
         return jsonify({"error": "An unexpected error occurred."}), 500
