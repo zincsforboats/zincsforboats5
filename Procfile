@@ -1,1 +1,1 @@
-web: python mastercode.py
+web: gunicorn mastercode:app
