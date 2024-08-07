@@ -72,38 +72,44 @@ def fetch_product_details(query):
         logging.info(f"Response JSON: {response.json()}")
         return [product['node'] for product in products]
     except requests.RequestException as e:
-        logging.error(f"Error fetching data from Shopify: {e}")
+        logging.error(f"Error fetching data from Shopify: {e}", exc_info=True)
         return []
 
 # Function to generate a response based on product availability
 def generate_response(query, page=1, per_page=10):
-    parsed_query = parse_query(query)
-    product_query = parsed_query['product']
-    products = fetch_product_details(product_query)
-    
-    if products:
-        total_products = len(products)
-        total_pages = math.ceil(total_products / per_page)
+    try:
+        parsed_query = parse_query(query)
+        product_query = parsed_query['product']
+        logging.info(f"Parsed product query: {product_query}")
+        products = fetch_product_details(product_query)
+        logging.info(f"Fetched products: {products}")
         
-        start = (page - 1) * per_page
-        end = start + per_page
-        paginated_products = products[start:end]
+        if products:
+            total_products = len(products)
+            total_pages = math.ceil(total_products / per_page)
+            
+            start = (page - 1) * per_page
+            end = start + per_page
+            paginated_products = products[start:end]
+            
+            response_parts = []
+            for product in paginated_products:
+                product_name = product['title']
+                product_url = f"{WEBSITE_URL}/products/{product['handle']}"
+                response_parts.append(f"[{product_name}]({product_url})")
+            
+            response_message = (f"We found the following matches for your query (Page {page} of {total_pages}):\n\n" + 
+                                "\n".join(response_parts) +
+                                f"\n\nUse 'next' or 'prev' to navigate pages.")
+        else:
+            response_message = (f"We currently do not have the exact product you're looking for in our system, but we may have them in stock. "
+                                f"Please visit our [Shopify store]({WEBSITE_URL}) and use the on-site search option. "
+                                f"Thank you for visiting today, and we appreciate the opportunity to earn your business.")
         
-        response_parts = []
-        for product in paginated_products:
-            product_name = product['title']
-            product_url = f"{WEBSITE_URL}/products/{product['handle']}"
-            response_parts.append(f"[{product_name}]({product_url})")
-        
-        response_message = (f"We found the following matches for your query (Page {page} of {total_pages}):\n\n" + 
-                            "\n".join(response_parts) +
-                            f"\n\nUse 'next' or 'prev' to navigate pages.")
-    else:
-        response_message = (f"We currently do not have the exact product you're looking for in our system, but we may have them in stock. "
-                            f"Please visit our [Shopify store]({WEBSITE_URL}) and use the on-site search option. "
-                            f"Thank you for visiting today, and we appreciate the opportunity to earn your business.")
-    
-    return response_message, total_pages
+        return response_message, total_pages
+    except Exception as e:
+        logging.error(f"Error in generate_response: {e}", exc_info=True)
+        raise
 
 # Function to interact with OpenAI API
 def get_openai_response(prompt):
@@ -115,7 +121,7 @@ def get_openai_response(prompt):
         )
         return response.choices[0].text.strip()
     except Exception as e:
-        logging.error(f"Error fetching data from OpenAI: {e}")
+        logging.error(f"Error fetching data from OpenAI: {e}", exc_info=True)
         return "An error occurred while trying to generate a response."
 
 # Root route
@@ -143,7 +149,7 @@ def get_response():
         logging.info("Returning generated response")
         return jsonify({"message": final_response, "total_pages": total_pages, "current_page": page})
     except Exception as e:
-        logging.error(f"Error in /get_response endpoint: {e}")
+        logging.error(f"Error in /get_response endpoint: {e}", exc_info=True)
         return jsonify({"error": "An unexpected error occurred."}), 500
 
 # Route to handle data request
@@ -155,7 +161,7 @@ def get_data():
                 "product_2": "Coastal Copper 450 Multi-Season Ablative Antifouling Bottom Paint Black Gallon"}
         return jsonify(data)
     except Exception as e:
-        logging.error(f"Error in /data endpoint: {e}")
+        logging.error(f"Error in /data endpoint: {e}", exc_info=True)
         return jsonify({"error": "An unexpected error occurred."}), 500
 
 if __name__ == '__main__':
