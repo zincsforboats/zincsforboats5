@@ -85,7 +85,7 @@ def generate_response(query, page=1, per_page=10):
         logging.info(f"Fetched products: {products}")
         
         total_products = len(products)
-        total_pages = math.ceil(total_products / per_page)
+        total_pages = max(1, math.ceil(total_products / per_page))  # Ensure total_pages is at least 1
         
         if products:
             start = (page - 1) * per_page
