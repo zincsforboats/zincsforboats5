@@ -37,24 +37,40 @@ def parse_query(query):
         'product': product.group(0) if product else None
     }
 
-# Function to fetch product details from Shopify
+# Function to fetch product details from Shopify using GraphQL
 def fetch_product_details(query):
     try:
         logging.info(f"Fetching product details from Shopify for query: {query}")
-        url = f"https://{SHOPIFY_SHOP_NAME}.myshopify.com/admin/api/2021-04/products.json"
+        url = f"https://{SHOPIFY_SHOP_NAME}.myshopify.com/api/2024-07/graphql.json"
         headers = {
-            "X-Shopify-Access-Token": SHOPIFY_ACCESS_TOKEN
+            "Content-Type": "application/json",
+            "X-Shopify-Storefront-Access-Token": SHOPIFY_ACCESS_TOKEN
         }
-        params = {'title': query}
-        logging.info(f"Request URL: {url}")
-        logging.info(f"Request Headers: {headers}")
-        logging.info(f"Request Params: {params}")
-        response = requests.get(url, headers=headers, params=params)
-        response.raise_for_status()
-        products = response.json().get('products', [])
+        data = {
+            "query": """
+            query searchProducts($query: String!, $first: Int) {
+                products(first: $first, query: $query) {
+                    edges {
+                        node {
+                            id
+                            title
+                            handle
+                        }
+                    }
+                }
+            }
+            """,
+            "variables": {
+                "query": query,
+                "first": 10
+            }
+        }
+        response = requests.post(url, headers=headers, json=data)
+        response.raise_for_status()  # Raise an HTTPError on bad responses
+        products = response.json()['data']['products']['edges']
         logging.info(f"Response Status Code: {response.status_code}")
         logging.info(f"Response JSON: {response.json()}")
-        return products
+        return [product['node'] for product in products]
     except requests.RequestException as e:
         logging.error(f"Error fetching data from Shopify: {e}")
         return []
@@ -120,6 +136,7 @@ def get_response():
             logging.info("Query not provided")
             return jsonify({"error": "Query is required"}), 400
         
+        logging.info(f"Received query: {query}")
         response_message, total_pages = generate_response(query, page, per_page)
         openai_response = get_openai_response(query)
         final_response = f"{response_message}\n\nAdditionally, here's some advice: {openai_response}"
