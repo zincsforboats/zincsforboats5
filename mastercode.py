@@ -84,10 +84,10 @@ def generate_response(query, page=1, per_page=10):
         products = fetch_product_details(product_query)
         logging.info(f"Fetched products: {products}")
         
+        total_products = len(products)
+        total_pages = math.ceil(total_products / per_page)
+        
         if products:
-            total_products = len(products)
-            total_pages = math.ceil(total_products / per_page)
-            
             start = (page - 1) * per_page
             end = start + per_page
             paginated_products = products[start:end]
